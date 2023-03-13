@@ -42,8 +42,7 @@ env:
   ECS_CLUSTER: dataflowops
   BLOCK: ${{ github.event.inputs.block_name }}
   AWS_REGION: ${{ github.event.inputs.aws-region }}
-  PREFECT_VERSION: ${{ github.event.inputs.prefect-version }}
-
+  PREFECT_VERSION: 2.8.2
 jobs:
   ecr-repo:
     name: ECR Repo & Image
