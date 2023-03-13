@@ -45,7 +45,7 @@ env:
   ECS_CLUSTER: dataflowops
   BLOCK: ${{ github.event.inputs.block_name }}
   AWS_REGION: us-east-1
-  PREFECT_VERSION: 2.8.2
+  PREFECT_VERSION: '2.8.2'
 jobs:
   ecr-repo:
     name: ECR Repo & Image
@@ -159,7 +159,6 @@ jobs:
       - name: Python dependencies
         run: |
           pip install prefect==$PREFECT_VERSION
-
           pip install prefect-aws
           prefect block register -m prefect_aws.ecs
    
