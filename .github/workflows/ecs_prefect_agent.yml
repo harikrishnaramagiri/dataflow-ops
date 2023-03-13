@@ -41,7 +41,7 @@ env:
   PROJECT: dataflowops
   ECS_CLUSTER: dataflowops
   BLOCK: ${{ github.event.inputs.block_name }}
-  AWS_REGION: ${{ github.event.inputs.aws-region }}
+  AWS_REGION: us-east-1
   PREFECT_VERSION: 2.8.2
 jobs:
   ecr-repo:
