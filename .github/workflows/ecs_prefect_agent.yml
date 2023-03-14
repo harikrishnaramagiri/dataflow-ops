@@ -43,7 +43,7 @@ on:
 env:
   PROJECT: dataflowops
   ECS_CLUSTER: dataflowops
-  BLOCK: ${{ github.event.inputs.block_name }}
+  BLOCK: ${{ workflow_dispatch.inputs.block_name }}
   AWS_REGION: us-east-1
   PREFECT_VERSION: '2.8.2'
 jobs:
@@ -117,7 +117,11 @@ jobs:
           aws ssm put-parameter --type SecureString --name PREFECT_API_KEY --value ${{ secrets.PREFECT_API_KEY }} --overwrite
           export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
           echo "accountid=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
-#          echo ::set-output name=accountid::$AWS_ACCOUNT_ID
+          echo ::set-output name=accountid::$AWS_ACCOUNT_ID
+
+          echo ::pip install prefect==$PREFECT_VERSION
+          echo ::${{ workflow_dispatch.inputs.cpu }}
+          echo ::${{ workflow_dispatch.inputs.memory }}
 
       - name: Deploy to ECS with AWS CloudFormation
         uses: aws-actions/aws-cloudformation-github-deploy@v1.1.0
@@ -201,7 +205,7 @@ jobs:
           s3.save(block_, overwrite=True)
           
           ecs = ECSTask(
-              name="prefect-ecs-task",
+              name="prefect-ecs-task2",
 
               aws_credentials=aws_creds,
               image=img_,
