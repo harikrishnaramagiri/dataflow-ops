@@ -43,9 +43,12 @@ on:
 env:
   PROJECT: dataflowops
   ECS_CLUSTER: dataflowops
-  BLOCK: ${{ workflow_dispatch.inputs.block_name }}
+  BLOCK: 'my-block'
   AWS_REGION: us-east-1
   PREFECT_VERSION: '2.8.2'
+  memory: 1024
+  cpu: 512
+  s3_path: 'prefect-orion/prod'
 jobs:
   ecr-repo:
     name: ECR Repo & Image
@@ -117,11 +120,7 @@ jobs:
           aws ssm put-parameter --type SecureString --name PREFECT_API_KEY --value ${{ secrets.PREFECT_API_KEY }} --overwrite
           export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
           echo "accountid=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo ::set-output name=accountid::$AWS_ACCOUNT_ID
-
-          echo ::pip install prefect==$PREFECT_VERSION
-          echo ::${{ workflow_dispatch.inputs.cpu }}
-          echo ::${{ workflow_dispatch.inputs.memory }}
+#          echo ::set-output name=accountid::$AWS_ACCOUNT_ID
 
       - name: Deploy to ECS with AWS CloudFormation
         uses: aws-actions/aws-cloudformation-github-deploy@v1.1.0
@@ -129,7 +128,7 @@ jobs:
           name: ${{ env.PROJECT }}
           template: infrastructure/ecs_cluster_prefect_agent.yml
           capabilities: CAPABILITY_NAMED_IAM
-          parameter-overrides: "cpu=${{ github.event.inputs.cpu }},memory=${{ github.event.inputs.memory }},project=${{ env.PROJECT }},cluster=${{ env.ECS_CLUSTER }},image=${{ needs.ecr-repo.outputs.image }},awsaccountid=${{steps.aws.outputs.accountid}},region=${{ env.AWS_REGION }}"
+          parameter-overrides: "cpu=${{env.cpu }},memory=${{env.memory }},project=${{ env.PROJECT }},cluster=${{ env.ECS_CLUSTER }},image=${{ needs.ecr-repo.outputs.image }},awsaccountid=${{steps.aws.outputs.accountid}},region=${{ env.AWS_REGION }}"
 
       - name: ECS Service Deployment finished
         run: echo "ECS Service Deployment finished at $(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_STEP_SUMMARY
