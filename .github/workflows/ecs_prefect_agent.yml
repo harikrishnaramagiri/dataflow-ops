@@ -161,8 +161,6 @@ jobs:
           pip install prefect==$PREFECT_VERSION
           pip install prefect-aws
           prefect block register -m prefect_aws.ecs
-   
-
       - name: Prefect Cloud login
         run: |
           prefect config set PREFECT_API_KEY=${{ secrets.PREFECT_API_KEY }}
