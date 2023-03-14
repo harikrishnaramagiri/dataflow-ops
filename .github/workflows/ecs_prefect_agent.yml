@@ -48,7 +48,7 @@ env:
   PREFECT_VERSION: '2.8.2'
   memory: 1024
   cpu: 512
-  s3_path: 'prefect-orion/prod'
+  s3_path: 'prefect-sample/my-block'
 jobs:
   ecr-repo:
     name: ECR Repo & Image
