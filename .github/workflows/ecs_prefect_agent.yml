@@ -163,6 +163,7 @@ jobs:
         run: |
           pip install prefect==$PREFECT_VERSION
           pip install prefect-aws
+          pip install s3fs
           prefect block register -m prefect_aws.ecs
       - name: Prefect Cloud login
         run: |
