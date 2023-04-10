@@ -1,6 +1,11 @@
-name: 1 Initial - ECS Prefect agent
-
+name: 1 Initial - ECS Prefect agent-ytp
 on:
+  pull_request:
+    branches:
+      - test
+  push:
+    branches:
+      - test
   workflow_dispatch:
     inputs:
       cpu:
@@ -26,7 +31,7 @@ on:
       prefect-version:
         description: Prefect version for flows
         required: true
-        default: '2.*'
+        default: '2.8.2'
         type: string
       aws-region:
         description: AWS Region
@@ -37,10 +42,12 @@ on:
 env:
   PROJECT: dataflowops
   ECS_CLUSTER: dataflowops
-  BLOCK: ${{ github.event.inputs.block_name }}
-  AWS_REGION: ${{ github.event.inputs.aws-region }}
-  PREFECT_VERSION: ${{ github.event.inputs.prefect-version }}
-
+  BLOCK: 'my-block'
+  AWS_REGION: us-east-1
+  PREFECT_VERSION: '2.8.2'
+  memory: 1024
+  cpu: 512
+  s3_path: 'bear-ups/my-block'
 jobs:
   ecr-repo:
     name: ECR Repo & Image
@@ -120,7 +127,7 @@ jobs:
           name: ${{ env.PROJECT }}
           template: infrastructure/ecs_cluster_prefect_agent.yml
           capabilities: CAPABILITY_NAMED_IAM
-          parameter-overrides: "cpu=${{ github.event.inputs.cpu }},memory=${{ github.event.inputs.memory }},project=${{ env.PROJECT }},cluster=${{ env.ECS_CLUSTER }},image=${{ needs.ecr-repo.outputs.image }},awsaccountid=${{steps.aws.outputs.accountid}},region=${{ env.AWS_REGION }}"
+          parameter-overrides: "cpu=${{env.cpu }},memory=${{env.memory }},project=${{ env.PROJECT }},cluster=${{ env.ECS_CLUSTER }},image=${{ needs.ecr-repo.outputs.image }},awsaccountid=${{steps.aws.outputs.accountid}},region=${{ env.AWS_REGION }}"
 
       - name: ECS Service Deployment finished
         run: echo "ECS Service Deployment finished at $(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_STEP_SUMMARY
@@ -154,9 +161,9 @@ jobs:
       - name: Python dependencies
         run: |
           pip install prefect==$PREFECT_VERSION
-          pip install .
+          pip install prefect-aws
+          pip install boto3 s3fs         
           prefect block register -m prefect_aws.ecs
-
       - name: Prefect Cloud login
         run: |
           prefect config set PREFECT_API_KEY=${{ secrets.PREFECT_API_KEY }}
@@ -180,12 +187,12 @@ jobs:
           
           id_ = "${{ secrets.AWS_ACCESS_KEY_ID }}"
           key_ = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-          path_ = "${{ github.event.inputs.s3_path }}"
+          path_ = "${{ env.s3_path }}"
           img_ = "${{ needs.ecr-repo.outputs.image }}"
           block_ = "$BLOCK"
           cluster_ = "${{ env.ECS_CLUSTER }}"
-          cpu_ = "${{ github.event.inputs.cpu }}"
-          memory_ = "${{ github.event.inputs.memory }}"
+          cpu_ = "${{ env.cpu }}"
+          memory_ = "${{env.memory }}"
           aws_acc_id = "$AWS_ACCOUNT_ID"
           exec_role = f"arn:aws:iam::{aws_acc_id}:role/dataflowops_ecs_execution_role"
           task_role = f"arn:aws:iam::{aws_acc_id}:role/dataflowops_ecs_execution_role"
@@ -197,6 +204,8 @@ jobs:
           s3.save(block_, overwrite=True)
           
           ecs = ECSTask(
+              name="prefect-ecs-task2",
+
               aws_credentials=aws_creds,
               image=img_,
               cpu=cpu_,
@@ -215,67 +224,68 @@ jobs:
 
       - name: Upload to S3 - maintenance flow
         id: maintenance
-        run: prefect deployment build utilities/maintenance.py:maintenance -n $PROJECT -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t maintenance --interval 10
+        run: prefect deployment build flows/main.py:prefect_test_ytp -n $PROJECT -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t prefect_ytp --interval 2100
 
-  list-flows:
-    name: List Prefect flows
-    runs-on: ubuntu-latest
-    needs: blocks
-    outputs:
-      prefect_flows: ${{ steps.set-matrix.outputs.prefect_flows }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - id: set-matrix
-        run: echo "prefect_flows=$(ls flows/*.py | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-        # todo may need to remove double str in "\n"
-#        run: echo "::set-output name=prefect_flows::$(ls flows/*.py | jq -R -s -c 'split("\n")[:-1]')"
+#   list-flows:
+#     name: List Prefect flows
+#     runs-on: ubuntu-latest
+#     needs: blocks
+#     outputs:
+#       prefect_flows: ${{ steps.set-matrix.outputs.prefect_flows }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v3
+#       - id: set-matrix
+#         run: echo "prefect_flows=$(ls flows/*.py | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+#         # todo may need to remove double str in "\n"
+# #        run: echo "::set-output name=prefect_flows::$(ls flows/*.py | jq -R -s -c 'split("\n")[:-1]')"
 
-  deploy:
-    name: Deploy
-    needs: list-flows
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        flows: ${{ fromJson(needs.list-flows.outputs.prefect_flows) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+#   deploy:
+#     name: Deploy
+#     needs: list-flows
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         flows: ${{ fromJson(needs.list-flows.outputs.prefect_flows) }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v3
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
+#       - name: Set up Python 3.9
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: 3.9
 
-      - name: Python dependencies
-        run: |
-          pip install prefect==$PREFECT_VERSION
-          pip install .
+#       - name: Python dependencies
+#         run: |
+#           pip install prefect==$PREFECT_VERSION
+#           pip install prefect-aws
+#           pip install pandas
 
-      - name: Prefect Cloud login
-        run: |
-          prefect config set PREFECT_API_KEY=${{ secrets.PREFECT_API_KEY }} 
-          prefect config set PREFECT_API_URL=${{ secrets.PREFECT_API_URL }}
+#       - name: Prefect Cloud login
+#         run: |
+#           prefect config set PREFECT_API_KEY=${{ secrets.PREFECT_API_KEY }} 
+#           prefect config set PREFECT_API_URL=${{ secrets.PREFECT_API_URL }}
 
-      - name: AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: 'no'
+#       - name: AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1-node16
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
+#           mask-aws-account-id: 'no'
 
-      - name: Deploy flows to S3
-        id: build
-        run: |
-          FLOW_NAME=$(basename ${{ matrix.flows }} .py)
-          prefect deployment build ${{ matrix.flows }}:$FLOW_NAME -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t $PROJECT -n $PROJECT -o $FLOW_NAME.yaml -ib ecs-task/$BLOCK --skip-upload
-          prefect deployment build ${{ matrix.flows }}:$FLOW_NAME -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t $PROJECT -n $PROJECT-local --skip-upload
-          echo "flow_manifest=$FLOW_NAME.yaml" >> $GITHUB_OUTPUT
-#          echo ::set-output name=flow_manifest::$FLOW_NAME.yaml
+#       - name: Deploy flows to S3
+#         id: build
+#         run: |
+#           FLOW_NAME=$(basename ${{ matrix.flows }} .py)
+#           prefect deployment build ${{ matrix.flows }}:$FLOW_NAME -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t $PROJECT -n $PROJECT -o $FLOW_NAME.yaml -ib ecs-task/$BLOCK --skip-upload
+#           prefect deployment build ${{ matrix.flows }}:$FLOW_NAME -sb s3/$BLOCK -q $PROJECT -v $GITHUB_SHA -a -t $PROJECT -n $PROJECT-local --skip-upload
+#           echo "flow_manifest=$FLOW_NAME.yaml" >> $GITHUB_OUTPUT
+# #          echo ::set-output name=flow_manifest::$FLOW_NAME.yaml
 
-      - name: Upload YAML deployment manifest as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Deployment YAML manifests
-          path: ${{ steps.build.outputs.flow_manifest }}
+#       - name: Upload YAML deployment manifest as artifact
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: Deployment YAML manifests
+#           path: ${{ steps.build.outputs.flow_manifest }}
