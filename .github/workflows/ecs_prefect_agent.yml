@@ -40,7 +40,7 @@ on:
         type: string
 
 env:
-  PROJECT: dataflowops
+  PROJECT: dataflowops-ytp
   ECS_CLUSTER: dataflowops
   BLOCK: 'my-block'
   AWS_REGION: us-east-1
