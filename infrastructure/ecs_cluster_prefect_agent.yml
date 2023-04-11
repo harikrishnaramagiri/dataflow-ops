@@ -34,7 +34,7 @@ Parameters:
   project:
     Type: String
     Description: Project name
-    Default: dataflowops
+    Default: UPS
   image:
     Type: String
     Description: Docker image for the service

@@ -40,14 +40,14 @@ on:
         type: string
 
 env:
-  PROJECT: dataflowops-ytp
-  ECS_CLUSTER: dataflowops
+  PROJECT: UPS-API
+  ECS_CLUSTER: ups
   BLOCK: 'my-block'
   AWS_REGION: us-east-1
   PREFECT_VERSION: '2.8.2'
   memory: 1024
   cpu: 512
-  s3_path: 'bear-ups/my-block'
+  s3_path: 'ups-bear/my-block'
 jobs:
   ecr-repo:
     name: ECR Repo & Image
