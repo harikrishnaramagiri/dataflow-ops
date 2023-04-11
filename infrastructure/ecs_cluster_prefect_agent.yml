@@ -23,7 +23,7 @@ Parameters:
   cluster:
     Type: String
     Description: Cluster name
-    Default: prefect2
+    Default: UPS
   awsaccountid:
     Type: String
     Description: AWS Account ID
